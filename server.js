@@ -6,7 +6,7 @@ require("dotenv").config();
 let aiClient = null;
 try {
   // Official JS/TS SDK
-  const { GoogleGenAI } = require("@google/genai");
+  const { GoogleGenerativeAI } = require("@google/generative-ai");
   aiClient = new GoogleGenAI({});
 } catch (err) {
   console.warn("Google GenAI SDK not available:", err.message);
