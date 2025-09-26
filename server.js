@@ -1,45 +1,52 @@
-// server.js (CommonJS - easy to run)
+// server.js
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+let aiClient = null;
+try {
+  // Official JS/TS SDK
+  const { GoogleGenAI } = require("@google/genai");
+  aiClient = new GoogleGenAI({});
+} catch (err) {
+  console.warn("Google GenAI SDK not available:", err.message);
+}
+
 const app = express();
-app.use(cors()); // allows your front-end to call the backend
+app.use(cors());
 app.use(express.json());
 
-// Basic /ask endpoint
+app.get("/", (req, res) => res.json({ status: "ok" }));
+
 app.post("/ask", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ error: "No prompt provided" });
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: "No prompt provided" });
 
-    // If you set OPENAI_API_KEY on Render, this will try to use OpenAI.
-    if (process.env.OPENAI_API_KEY) {
-      try {
-        const OpenAI = require("openai");
-        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  // If SDK present and API key set, call Gemini
+  if (aiClient && process.env.GEMINI_API_KEY) {
+    try {
+      // Using generateContent as in the official quickstart
+      const response = await aiClient.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt
+      });
 
-        const completion = await client.chat.completions.create({
-          model: "gpt-4o-mini", // optional: change model later
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 500,
-        });
+      // SDK usually exposes a .text() or .text property on response.
+      // Try common locations for the text and fall back if needed.
+      const reply =
+        (response && response.text) ||
+        (response && response?.candidates?.[0]?.content?.[0]?.parts?.[0]?.text) ||
+        JSON.stringify(response).slice(0, 1000);
 
-        const reply =
-          completion?.choices?.[0]?.message?.content ?? "No reply from OpenAI";
-        return res.json({ reply });
-      } catch (err) {
-        console.error("OpenAI call failed:", err.message || err);
-        // fallback reply
-      }
+      return res.json({ reply });
+    } catch (err) {
+      console.error("Gemini call failed:", err);
+      return res.status(500).json({ reply: "Gemini error: " + (err.message || err) });
     }
-
-    // Fallback (works without OpenAI): simple echo reply
-    res.json({ reply: `You said: ${prompt}` });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ reply: "Server error" });
   }
+
+  // Fallback for when Gemeni SDK/key isn't available
+  return res.json({ reply: `You said: ${prompt}` });
 });
 
 const port = process.env.PORT || 3000;
