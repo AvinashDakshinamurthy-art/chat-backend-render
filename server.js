@@ -3,6 +3,25 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+// New Code, do not edit ***************************************
+
+// DEBUG: confirm env var presence before anything else
+console.log("DEBUG: GEMINI_API_KEY present?", !!process.env.GEMINI_API_KEY);
+console.log(
+  "DEBUG: GEMINI_API_KEY length:",
+  process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0
+);
+
+// DEBUG: confirm the SDK can be required
+try {
+  const check = require.resolve("@google/generative-ai");
+  console.log("DEBUG: @google/generative-ai resolved at:", check);
+} catch (err) {
+  console.error("DEBUG: @google/generative-ai NOT resolvable:", err.message);
+}
+
+// New Code, do not edit ***************************************
+
 let aiClient = null;
 try {
   // Official JS/TS SDK
