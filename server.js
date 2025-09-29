@@ -1,31 +1,38 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import { GoogleGenerativeAI } from "@google/genai";
+import OpenAI from "openai";
 
-dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Make sure you set GEMINI_API_KEY in Render Environment
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize OpenAI client
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 app.post("/ask", async (req, res) => {
-  const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: "No prompt provided" });
+  const prompt = req.body.prompt || "";
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    res.json({ reply: text });
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",        // fast, inexpensive GPT-4 model
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: prompt }
+      ]
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ reply });
   } catch (err) {
-    console.error("Gemini error:", err);
-    res.status(500).json({ error: "Failed to get response from Gemini" });
+    console.error("OpenAI error:", err);
+    res.status(500).json({ reply: "Server error: " + err.message });
   }
 });
 
-// Render assigns PORT; default to 3000 for local dev
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+// Use Render’s assigned port
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
