@@ -12,3 +12,5 @@
   "@google/generative-ai": "^0.24.1"
   }
 }
+
+fix: add @google/generative-ai dependency
